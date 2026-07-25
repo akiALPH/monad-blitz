@@ -153,6 +153,26 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime(), pid: process.pid, port: PORT });
 });
 
+// ── Serve frontend build (works from ANY cwd, zero config) ──
+const FRONTEND_BUILD = PATH.resolve(ROOT, '..', 'frontend', 'dist');
+try {
+  if (FS.existsSync(FRONTEND_BUILD)) {
+    app.use(express.static(FRONTEND_BUILD));
+    const monadBlitzIndex = PATH.join(FRONTEND_BUILD, 'index.html');
+    if (FS.existsSync(monadBlitzIndex)) {
+      app.use(function(req, res, next) {
+        if (req.method === 'GET' && !req.path.startsWith('/api/') && req.path !== '/health') {
+          return res.sendFile(monadBlitzIndex);
+        }
+        next();
+      });
+    }
+    log(`Frontend: http://localhost:${PORT}/`);
+  } else {
+    log(`Frontend build not found at ${FRONTEND_BUILD} — run 'cd frontend && npm run build'`);
+  }
+} catch (e) { log(`Frontend: ${e.message}`); }
+
 // ──────── API ROUTES ────────
 
 app.get('/api/status', async (req, res) => {
