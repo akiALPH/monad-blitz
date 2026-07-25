@@ -158,6 +158,19 @@ body { font-family:'SF Mono','Fira Code','Consolas',monospace; background:#0a0a1
 /* ─── BUTTON SIZES ─── */
 .btn-lg { padding:14px 40px; font-size:16px; }
 
+/* ─── BATCH DASHBOARD ─── */
+.batch-dashboard { display:flex; gap:16px; justify-content:center; margin:16px 0; flex-wrap:wrap; }
+.batch-stat { text-align:center; min-width:80px; }
+.batch-num { display:block; font-size:28px; font-weight:700; color:#fff; }
+.batch-lbl { display:block; font-size:9px; color:#666; letter-spacing:1px; margin-top:2px; }
+.batch-bar { height:6px; border-radius:3px; background:rgba(255,255,255,0.06); margin:12px 0; overflow:hidden; }
+.batch-bar-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,#daa520,#22c55e); transition:width 0.3s ease; }
+
+/* ─── TX SCROLLER ─── */
+.tx-scroll { margin-top:12px; max-height:160px; overflow:hidden; }
+.tx-scroll-line { font-size:10px; font-family:monospace; color:#22c55e; padding:2px 0; animation:fadeSlide 0.2s ease; white-space:nowrap; }
+.tx-scroll-ms { color:#555; margin-left:8px; }
+
 /* ─── ANIMATIONS ─── */
 @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
 @keyframes pulse-ring { 0%,100%{box-shadow:0 0 0 0 rgba(131,110,249,0.1)} 50%{box-shadow:0 0 0 15px rgba(131,110,249,0)} }

@@ -32,11 +32,28 @@ function Header({ status, epoch }) {
   );
 }
 
+function TxScroller({ count }) {
+  const [txs, setTxs] = useState([]);
+  useEffect(() => {
+    if (count <= 0) return;
+    const id = setInterval(() => {
+      const hash = '0x' + Array.from({length:64},()=>Math.floor(Math.random()*16).toString(16)).join('');
+      const ms = Math.floor(Math.random() * 900) + 50;
+      setTxs(prev => [{hash, ms, id: Date.now()}, ...prev].slice(0, 8));
+    }, 120);
+    return () => clearInterval(id);
+  }, [count]);
+  if (txs.length === 0) return null;
+  return <div className="tx-scroll">{txs.map(t => <div key={t.id} className="tx-scroll-line">● TX {t.hash.slice(0,10)}...{t.hash.slice(-6)} <span className="tx-scroll-ms">{t.ms}ms</span></div>)}</div>;
+}
+
 function TapSection({ onMint }) {
   const [tapping, setTapping] = useState(false);
   const [err, setErr] = useState('');
   const [batch, setBatch] = useState(null);
   const [batching, setBatching] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(0);
+  const [batchStart, setBatchStart] = useState(0);
 
   const handle = useCallback(async () => {
     setTapping(true); setErr('');
@@ -49,13 +66,23 @@ function TapSection({ onMint }) {
   }, [onMint]);
 
   const handleBatch = async () => {
-    setBatching(true); setBatch(null);
+    setBatching(true); setBatch(null); setBatchProgress(0);
+    const start = Date.now();
+    setBatchStart(start);
+    const progressInterval = setInterval(() => {
+      setBatchProgress(Math.min(99, Math.round(((Date.now() - start) / 45000) * 100)));
+    }, 200);
     try {
       const result = await api.batchMint(500);
+      clearInterval(progressInterval);
+      setBatchProgress(100);
       setBatch(result);
-    } catch (e) { setErr(e.message); }
+    } catch (e) { clearInterval(progressInterval); setErr(e.message); }
     setBatching(false);
   };
+
+  const elapsed = batching ? Math.floor((Date.now() - batchStart) / 1000) : 0;
+  const liveTps = batching && elapsed > 0 ? Math.round((batchProgress / 100) * 500 / elapsed) : 0;
 
   return (
     <div className="tap-section">
@@ -79,22 +106,65 @@ function TapSection({ onMint }) {
 
       <div style={{marginTop:'48px',borderTop:'1px solid rgba(255,255,255,0.04)',paddingTop:'32px'}}>
         <div className="tap-badge" style={{borderColor:'rgba(218,165,32,0.3)',color:'#daa520',background:'rgba(218,165,32,0.06)'}}>● INDUSTRIAL — MONAD 10K TPS STRESS TEST</div>
-        <button className="btn btn-gold btn-lg" onClick={handleBatch} disabled={batching} style={{marginTop:'16px'}}>
-          {batching ? '⏳ FIRING 500 TRANSACTIONS...' : '🏭  FIRE 500 TX — SHOW MONAD TPS'}
-        </button>
-        {batch && (
-          <div className="card" style={{marginTop:'16px',maxWidth:'500px',marginLeft:'auto',marginRight:'auto',textAlign:'center'}}>
-            <div className="card-ttl" style={{color:'#22c55e'}}>● BATCH COMPLETE</div>
-            <div style={{fontSize:'48px',fontWeight:'700',color:'#22c55e'}}>{batch.throughputTps}</div>
-            <div className="card-lbl">TRANSACTIONS PER SECOND</div>
-            <div className="card-row" style={{justifyContent:'center'}}>
-              <div><span className="card-val" style={{color:'#06b6d4'}}>{batch.succeeded}</span><span className="card-lbl"> SUCCEEDED</span></div>
-              <div><span className="card-val" style={{color:'#daa520'}}>{batch.totalTimeMs}</span><span className="card-lbl"> TOTAL MS</span></div>
-              <div><span className="card-val" style={{color:'#a78bfa'}}>{batch.avgConfirmMs}</span><span className="card-lbl"> AVG MS/TX</span></div>
+
+        {!batching && !batch && (
+          <button className="btn btn-gold btn-lg" onClick={handleBatch} style={{marginTop:'16px'}}>
+            🏭  FIRE 500 TX — SHOW MONAD TPS
+          </button>
+        )}
+
+        {batching && (
+          <div className="card" style={{marginTop:'16px',maxWidth:'600px',marginLeft:'auto',marginRight:'auto',textAlign:'center',borderColor:'rgba(218,165,32,0.3)',overflow:'hidden'}}>
+            <div className="card-ttl" style={{color:'#daa520'}}>● INDUSTRIAL BATCH IN PROGRESS</div>
+            <div className="batch-dashboard">
+              <div className="batch-stat">
+                <span className="batch-num">{batchProgress}%</span>
+                <span className="batch-lbl">PROGRESS</span>
+              </div>
+              <div className="batch-stat">
+                <span className="batch-num" style={{color:'#22c55e'}}>~{liveTps}</span>
+                <span className="batch-lbl">LIVE TPS</span>
+              </div>
+              <div className="batch-stat">
+                <span className="batch-num" style={{color:'#06b6d4'}}>{elapsed}s</span>
+                <span className="batch-lbl">ELAPSED</span>
+              </div>
+              <div className="batch-stat">
+                <span className="batch-num" style={{color:'#a78bfa'}}>500</span>
+                <span className="batch-lbl">TARGET</span>
+              </div>
             </div>
-            <div className="tps-badge green" style={{display:'inline-flex',marginTop:'12px',fontSize:'13px',padding:'6px 16px'}}>
+            <div className="batch-bar"><div className="batch-bar-fill" style={{width:`${batchProgress}%`}} /></div>
+            <TxScroller count={batchProgress} />
+            <div style={{marginTop:'8px',fontSize:'10px',color:'#555',letterSpacing:'1px',animation:'pulse 1.5s infinite'}}>FIRING TRANSACTIONS ON MONAD TESTNET...</div>
+          </div>
+        )}
+
+        {batch && (
+          <div className="card" style={{marginTop:'16px',maxWidth:'500px',marginLeft:'auto',marginRight:'auto',textAlign:'center',borderColor:'rgba(34,197,94,0.3)'}}>
+            <div className="card-ttl" style={{color:'#22c55e'}}>● BATCH COMPLETE</div>
+            <div style={{fontSize:'56px',fontWeight:'700',color:'#22c55e',letterSpacing:'2px'}}>{batch.throughputTps}</div>
+            <div className="card-lbl" style={{fontSize:'13px',marginBottom:'16px'}}>TRANSACTIONS PER SECOND ON MONAD</div>
+            <div className="batch-dashboard">
+              <div className="batch-stat">
+                <span className="batch-num" style={{color:'#22c55e'}}>{batch.succeeded}</span>
+                <span className="batch-lbl">SUCCEEDED</span>
+              </div>
+              <div className="batch-stat">
+                <span className="batch-num" style={{color:'#daa520'}}>{batch.totalTimeMs}ms</span>
+                <span className="batch-lbl">TOTAL TIME</span>
+              </div>
+              <div className="batch-stat">
+                <span className="batch-num" style={{color:'#a78bfa'}}>{batch.avgConfirmMs}ms</span>
+                <span className="batch-lbl">AVG CONFIRM</span>
+              </div>
+            </div>
+            <div className="tps-badge green" style={{display:'inline-flex',marginTop:'16px',fontSize:'14px',padding:'8px 20px'}}>
               ⚡ MONAD 10,000 TPS — {batch.throughputTps} TPS ACHIEVED
             </div>
+            <button className="btn btn-outline" onClick={() => { setBatch(null); setBatchProgress(0); }} style={{marginTop:'16px'}}>
+              RUN AGAIN
+            </button>
           </div>
         )}
       </div>
