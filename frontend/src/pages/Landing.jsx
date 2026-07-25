@@ -8,7 +8,7 @@ export default function Landing() {
   const [status, setStatus] = useState(null);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/status`)
+    fetch(`/api/status`)
       .then(r => r.json())
       .then(setStatus)
       .catch(() => setStatus({ status: 'offline' }));
