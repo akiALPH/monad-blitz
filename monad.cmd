@@ -1,6 +1,13 @@
 @echo off
 title MONAD ENGINE - LUXVOID PROTOCOL
 cd /d "C:\Users\akash\source\monad-blitz\backend"
+
+:: Try to add node to PATH if not present
+where node >nul 2>&1
+if errorlevel 1 (
+    set "PATH=C:\Users\akash\AppData\Local\hermes\node;%PATH%"
+)
+
 cls
 echo.
 echo  ============================================
