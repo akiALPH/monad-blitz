@@ -4,6 +4,8 @@ import Terminal from './pages/Terminal';
 import Dashboard from './pages/Dashboard';
 import Vault from './pages/Vault';
 import Collateral from './pages/Collateral';
+import Certificate from './pages/Certificate';
+import Provenance from './pages/Provenance';
 import './App.css';
 
 export default function App() {
@@ -16,6 +18,8 @@ export default function App() {
           <Route path="/dashboard/:id" element={<Dashboard />} />
           <Route path="/vault" element={<Vault />} />
           <Route path="/collateral" element={<Collateral />} />
+          <Route path="/certificate/:id" element={<Certificate />} />
+          <Route path="/provenance/:id" element={<Provenance />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

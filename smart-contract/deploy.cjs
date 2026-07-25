@@ -2,7 +2,6 @@ const { ethers } = require('ethers');
 const fs = require('fs');
 const path = require('path');
 
-// Load .env manually
 const envPath = path.join(__dirname, '..', 'backend', '.env');
 if (fs.existsSync(envPath)) {
   for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
@@ -21,9 +20,34 @@ const RPC = process.env.MONAD_RPC || 'https://testnet-rpc.monad.xyz';
 const CHAIN_ID = parseInt(process.env.MONAD_CHAIN_ID || '10143');
 const PRIVATE_KEY = process.env.MONAD_PRIVATE_KEY || '';
 
+const ABI = [
+  "constructor()",
+  "function mintAsset(uint256 tokenId, string calldata chipUid, int32 lat, int32 lon, string calldata metadataURI) external returns (uint256)",
+  "function recordTap(uint256 tokenId, int32 lat, int32 lon) external returns (bool)",
+  "function getCurrentGeo(uint256 tokenId) external view returns (int32 lat, int32 lon, uint64 timestamp, uint256 totalTaps)",
+  "function getGeoHistory(uint256 tokenId) external view returns ((int32,int32,uint64)[])",
+  "function getGeoHistoryCount(uint256 tokenId) external view returns (uint256)",
+  "function getOwnershipHistory(uint256 tokenId) external view returns ((address,uint64)[])",
+  "function setCollateralStatus(uint256 tokenId, bool status) external",
+  "function royaltyInfo(uint256, uint256 salePrice) external view returns (address, uint256)",
+  "function transferAsset(uint256 tokenId, address to) external",
+  "function ownerOf(uint256 tokenId) external view returns (address)",
+  "function balanceOf(address owner) external view returns (uint256)",
+  "function tokenURI(uint256 tokenId) external view returns (string)",
+  "function isCollateralized(uint256 tokenId) external view returns (bool)",
+  "function getTotalTaps(uint256 tokenId) external view returns (uint256)",
+  "function minter() external view returns (address)",
+  "function totalSupply() external view returns (uint256)",
+  "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
+  "event CollateralStatusChanged(uint256 indexed tokenId, bool status)",
+  "event AssetMinted(uint256 indexed tokenId, string chipUid, int32 lat, int32 lon, uint64 timestamp)",
+  "event TapRecorded(uint256 indexed tokenId, int32 lat, int32 lon, uint64 timestamp, uint256 totalTaps)",
+  "event VelocityCheckFailed(uint256 indexed tokenId, uint256 velocityMps, uint256 maxAllowed)",
+];
+
 async function main() {
   console.log('╔═══════════════════════════════════════╗');
-  console.log('║  Deploy MonadBlitzAsset                ║');
+  console.log('║  Deploy MonadBlitzAsset v2             ║');
   console.log('╚═══════════════════════════════════════╝');
 
   if (!PRIVATE_KEY) {
@@ -43,7 +67,7 @@ async function main() {
     console.error('\n❌ Zero balance. Get testnet MON:');
     console.error('   1. Go to https://faucet.monad.xyz/');
     console.error(`   2. Enter: ${wallet.address}`);
-    console.error('   3. Get testnet MON (connect X or Discord for more)');
+    console.error('   3. Connect X or Discord for tokens');
     process.exit(1);
   }
 
@@ -52,27 +76,7 @@ async function main() {
     'utf8'
   );
 
-  const factory = new ethers.ContractFactory(
-    [
-      "constructor()",
-      "function mintAsset(uint256 tokenId, string calldata chipUid, int32 lat, int32 lon, string calldata metadataURI) external returns (uint256)",
-      "function getAssetGeo(uint256 tokenId) external view returns (int32 lat, int32 lon, uint64 timestamp)",
-      "function setCollateralStatus(uint256 tokenId, bool status) external",
-      "function royaltyInfo(uint256, uint256 salePrice) external view returns (address, uint256)",
-      "function transferAsset(uint256 tokenId, address to) external",
-      "function ownerOf(uint256 tokenId) external view returns (address)",
-      "function balanceOf(address owner) external view returns (uint256)",
-      "function tokenURI(uint256 tokenId) external view returns (string)",
-      "function isCollateralized(uint256 tokenId) external view returns (bool)",
-      "function minter() external view returns (address)",
-      "function totalSupply() external view returns (uint256)",
-      "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
-      "event CollateralStatusChanged(uint256 indexed tokenId, bool status)",
-      "event AssetMinted(uint256 indexed tokenId, string chipUid, int32 lat, int32 lon, uint64 timestamp)",
-    ],
-    solSource,
-    wallet
-  );
+  const factory = new ethers.ContractFactory(ABI, solSource, wallet);
 
   console.log('\n🔧 Deploying MonadBlitzAsset...');
   const contract = await factory.deploy();
