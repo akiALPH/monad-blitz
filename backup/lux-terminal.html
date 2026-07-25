@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luxvoid Terminal — Monad Blitz Backup</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  background: #0a0a0f;
+  color: #e0e0e0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px;
+}
+
+h1 { font-size: 24px; font-weight: 300; letter-spacing: 4px; color: #fff; margin-bottom: 8px; }
+.subtitle { color: #666; font-size: 12px; margin-bottom: 32px; letter-spacing: 2px; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 20px;
+  font-size: 11px; margin-bottom: 24px;
+  background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.15);
+  color: #22c55e;
+}
+
+.terminal {
+  width: 100%; max-width: 700px;
+  background: #0d0d14; border: 1px solid #1a1a2e; border-radius: 8px;
+  padding: 16px; font-size: 13px; line-height: 1.7;
+  min-height: 300px; margin-bottom: 24px;
+  overflow-y: auto; max-height: 400px;
+}
+
+.line { opacity: 0; animation: fadeIn 0.3s ease forwards; }
+.ts { color: #555; }
+.ok { color: #22c55e; }
+.info { color: #06b6d4; }
+.hl { color: #a78bfa; }
+.warn { color: #f59e0b; }
+.dim { color: #666; }
+
+@keyframes fadeIn { to { opacity: 1; } }
+
+.radar {
+  position: relative; width: 120px; height: 120px; margin: 0 auto 24px;
+}
+.ring {
+  position: absolute; border-radius: 50%;
+  border: 1px solid rgba(6,182,212,0.25);
+  animation: ping 2s ease-out infinite;
+}
+.ring:nth-child(1) { width:100%;height:100%; animation-delay:0s; }
+.ring:nth-child(2) { width:75%;height:75%;top:12.5%;left:12.5%; animation-delay:0.5s; }
+.ring:nth-child(3) { width:50%;height:50%;top:25%;left:25%; animation-delay:1s; }
+
+@keyframes ping {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.dot {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #06b6d4;
+  box-shadow: 0 0 20px rgba(6,182,212,0.6);
+}
+
+.btn {
+  padding: 14px 40px; border: none; border-radius: 8px;
+  font-family: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all 0.3s ease;
+  background: linear-gradient(135deg, #daa520, #b8860b);
+  color: #1a1a2e;
+}
+.btn:hover { box-shadow: 0 0 30px rgba(218,165,32,0.4); transform: translateY(-1px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.dashboard {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px; width: 100%; max-width: 700px; margin-top: 24px;
+}
+.card {
+  background: rgba(15,15,25,0.8); border: 1px solid rgba(6,182,212,0.12);
+  border-radius: 12px; padding: 20px; text-align: center;
+}
+.card-title { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #06b6d4; margin-bottom: 8px; }
+.card-value { font-size: 20px; font-weight: bold; margin-bottom: 4px; }
+.card-label { font-size: 11px; color: #666; }
+
+.tps {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  background: rgba(34,197,94,0.1); color: #22c55e;
+  border: 1px solid rgba(34,197,94,0.2); margin-top: 16px;
+}
+</style>
+</head>
+<body>
+
+<div class="badge">● BREAKING: BRAZIL B3 ACCEPTS TOKENIZED COWS AS COLLATERAL</div>
+<h1>LUXVOID</h1>
+<div class="subtitle">PHYSICAL → DIGITAL → COLLATERAL · MONAD BLITZ BACKUP</div>
+
+<div id="radarContainer" class="radar" style="display:none">
+  <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+  <div class="dot"></div>
+</div>
+
+<div id="statusText" style="color:#06b6d4;font-size:13px;letter-spacing:1px;margin-bottom:24px">
+  READY
+</div>
+
+<div class="terminal" id="terminal"></div>
+
+<button class="btn" id="tapBtn" onclick="startDemo()">
+  TAP COIN TO INITIALIZE
+</button>
+
+<div id="dashboardContainer" class="dashboard" style="display:none"></div>
+
+<div id="tpsContainer" style="display:none;text-align:center;margin-top:12px">
+  <div class="tps">⚡ MONAD 10K TPS — CONFIRMED IN 847ms</div>
+</div>
+
+<div id="navContainer" style="display:none;margin-top:16px;text-align:center">
+  <button class="btn" onclick="resetDemo()" style="padding:10px 24px;font-size:12px">
+    NEW TAP
+  </button>
+</div>
+
+<script>
+const terminal = document.getElementById('terminal');
+const tapBtn = document.getElementById('tapBtn');
+const radar = document.getElementById('radarContainer');
+const statusText = document.getElementById('statusText');
+const dashContainer = document.getElementById('dashboardContainer');
+const tpsContainer = document.getElementById('tpsContainer');
+const navContainer = document.getElementById('navContainer');
+
+function addLine(text, className = '') {
+  const line = document.createElement('div');
+  line.className = 'line';
+  const ts = new Date().toLocaleTimeString();
+  line.innerHTML = `<span class="ts">[${ts}]</span> <span class="${className}">${text}</span>`;
+  terminal.appendChild(line);
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+function delay(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+async function startDemo() {
+  tapBtn.disabled = true;
+  tapBtn.textContent = 'INITIALIZING...';
+  terminal.innerHTML = '';
+  dashContainer.style.display = 'none';
+  tpsContainer.style.display = 'none';
+  navContainer.style.display = 'none';
+  radar.style.display = 'block';
+  statusText.textContent = 'SCANNING NFC CHIP...';
+
+  addLine('Initializing NFC reader...', 'info');
+  await delay(500);
+  addLine('[NFC] Chip detected: NTAG424 DNA', 'ok');
+  await delay(400);
+  addLine('[NFC] UID: A4:23:9B:1C:7E:F0:12:45', 'ok');
+  await delay(300);
+
+  statusText.textContent = 'ACQUIRING GPS...';
+  addLine('[GPS] Acquiring location...', 'info');
+  await delay(600);
+  const lat = 43.6532;
+  const lon = -79.3832;
+  addLine(`[GPS] Coordinates locked: ${lat.toFixed(4)}, ${lon.toFixed(4)}`, 'ok');
+  await delay(300);
+
+  addLine('[CHIP] Verifying AES-128 CMAC signature...', 'info');
+  await delay(500);
+  addLine('[CHIP] Signature valid. Physical proof confirmed.', 'ok');
+  await delay(300);
+
+  statusText.textContent = 'BROADCASTING TO MONAD TESTNET...';
+  addLine('[MONAD] Broadcasting mint transaction...', 'hl');
+  await delay(800);
+  const txHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
+  const tokenId = Math.floor(Math.random() * 999999);
+  const blockNum = Math.floor(Math.random() * 1000) + 47000000;
+
+  addLine('', '');
+  addLine('═══════════════════════════════════', 'hl');
+  addLine(`TOKEN #${tokenId} MINTED`, 'ok');
+  addLine(`TX: ${txHash}`, 'hl');
+  addLine(`Block: ${blockNum}`, 'info');
+  addLine('Confirmed in 847ms', 'ok');
+  addLine('═══════════════════════════════════', 'hl');
+
+  radar.style.display = 'none';
+  statusText.innerHTML = '✅ <span style="color:#22c55e">ASSET #' + tokenId + ' MINTED ON MONAD</span>';
+
+  // Dashboard
+  dashContainer.innerHTML = `
+    <div class="card">
+      <div class="card-title">● TRANSFER</div>
+      <div class="card-value" style="font-size:13px;color:#888;font-family:monospace">
+        ${txHash.slice(0,10)}...${txHash.slice(-6)}
+      </div>
+      <div class="card-label">Block #${blockNum}</div>
+      <div style="margin-top:8px;font-size:11px;color:#666">
+        Ownership: 0x596e...2Cc3f
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">● ROYALTY</div>
+      <div class="card-value" style="color:#a78bfa">5%</div>
+      <div class="card-label">On secondary sales</div>
+      <div style="margin-top:8px;font-size:11px;color:#666">
+        PATENT #5 — PPT LIFECYCLE
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">● GEOLOCATION</div>
+      <div class="card-value" style="font-size:16px">${lat.toFixed(4)}, ${lon.toFixed(4)}</div>
+      <div class="card-label">Stamped on-chain at block #${blockNum}</div>
+    </div>
+  `;
+  dashContainer.style.display = 'grid';
+  tpsContainer.style.display = 'block';
+  navContainer.style.display = 'block';
+
+  tapBtn.textContent = '● DEMO COMPLETE';
+}
+
+function resetDemo() {
+  terminal.innerHTML = '';
+  dashContainer.style.display = 'none';
+  tpsContainer.style.display = 'none';
+  navContainer.style.display = 'none';
+  radar.style.display = 'none';
+  statusText.textContent = 'READY';
+  tapBtn.disabled = false;
+  tapBtn.textContent = 'TAP COIN TO INITIALIZE';
+}
+</script>
+
+<div style="margin-top:48px;font-size:10px;color:#333;text-align:center">
+  MONAD BLITZ TORONTO · 2026 · LUXVOID PROTOCOL<br>
+  BACKUP DEMO — NO BACKEND REQUIRED
+</div>
+
+</body>
+</html>
