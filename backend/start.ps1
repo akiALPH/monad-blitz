@@ -14,8 +14,14 @@ function Log($msg) {
 }
 
 function StartServer {
-  $global:proc = Start-Process -FilePath "node" -ArgumentList $ServerPath -NoNewWindow -PassThru
-  Log "SERVER STARTED -- PID: $($global:proc.Id)"
+  $nodePath = (Get-Command node -ErrorAction SilentlyContinue).Source
+  if (-not $nodePath) { $nodePath = "node" }
+  $global:proc = Start-Process -FilePath $nodePath -ArgumentList "`"$ServerPath`"" -NoNewWindow -PassThru
+  if ($global:proc -and $global:proc.Id) {
+    Log "SERVER STARTED -- PID: $($global:proc.Id) [$nodePath]"
+  } else {
+    Log "FAILED to start server. Node not found at: $nodePath"
+  }
   Start-Sleep -Seconds 2
 }
 
