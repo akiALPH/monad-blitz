@@ -35,6 +35,8 @@ function Header({ status, epoch }) {
 function TapSection({ onMint }) {
   const [tapping, setTapping] = useState(false);
   const [err, setErr] = useState('');
+  const [batch, setBatch] = useState(null);
+  const [batching, setBatching] = useState(false);
 
   const handle = useCallback(async () => {
     setTapping(true); setErr('');
@@ -45,6 +47,15 @@ function TapSection({ onMint }) {
     } catch (e) { setErr(e.message); }
     setTapping(false);
   }, [onMint]);
+
+  const handleBatch = async () => {
+    setBatching(true); setBatch(null);
+    try {
+      const result = await api.batchMint(500);
+      setBatch(result);
+    } catch (e) { setErr(e.message); }
+    setBatching(false);
+  };
 
   return (
     <div className="tap-section">
@@ -65,6 +76,28 @@ function TapSection({ onMint }) {
         {tapping ? '⏳ MINTING ON MONAD...' : '◆  TAP COIN TO MINT'}
       </button>
       {err && <div className="err-msg">{err}</div>}
+
+      <div style={{marginTop:'48px',borderTop:'1px solid rgba(255,255,255,0.04)',paddingTop:'32px'}}>
+        <div className="tap-badge" style={{borderColor:'rgba(218,165,32,0.3)',color:'#daa520',background:'rgba(218,165,32,0.06)'}}>● INDUSTRIAL — MONAD 10K TPS STRESS TEST</div>
+        <button className="btn btn-gold btn-lg" onClick={handleBatch} disabled={batching} style={{marginTop:'16px'}}>
+          {batching ? '⏳ FIRING 500 TRANSACTIONS...' : '🏭  FIRE 500 TX — SHOW MONAD TPS'}
+        </button>
+        {batch && (
+          <div className="card" style={{marginTop:'16px',maxWidth:'500px',marginLeft:'auto',marginRight:'auto',textAlign:'center'}}>
+            <div className="card-ttl" style={{color:'#22c55e'}}>● BATCH COMPLETE</div>
+            <div style={{fontSize:'48px',fontWeight:'700',color:'#22c55e'}}>{batch.throughputTps}</div>
+            <div className="card-lbl">TRANSACTIONS PER SECOND</div>
+            <div className="card-row" style={{justifyContent:'center'}}>
+              <div><span className="card-val" style={{color:'#06b6d4'}}>{batch.succeeded}</span><span className="card-lbl"> SUCCEEDED</span></div>
+              <div><span className="card-val" style={{color:'#daa520'}}>{batch.totalTimeMs}</span><span className="card-lbl"> TOTAL MS</span></div>
+              <div><span className="card-val" style={{color:'#a78bfa'}}>{batch.avgConfirmMs}</span><span className="card-lbl"> AVG MS/TX</span></div>
+            </div>
+            <div className="tps-badge green" style={{display:'inline-flex',marginTop:'12px',fontSize:'13px',padding:'6px 16px'}}>
+              ⚡ MONAD 10,000 TPS — {batch.throughputTps} TPS ACHIEVED
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

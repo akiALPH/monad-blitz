@@ -45,3 +45,6 @@ export const claimRewards = id =>
   api(`/api/claim/${id}`, { method: 'POST' });
 
 export const getStakeInfo = id => api(`/api/stake-info/${id}`);
+
+export const batchMint = (count = 500) =>
+  api('/api/batch-mint', { method: 'POST', body: JSON.stringify({ count }) });

@@ -208,6 +208,73 @@ app.post('/api/mint', async (req, res) => {
   } catch (e) { err(`MINT: ${e.message}`); res.status(500).json({ error: e.message }); }
 });
 
+// ─── BATCH MINT (Industrial scale — 500 TX) ───
+app.post('/api/batch-mint', async (req, res) => {
+  try {
+    const { count } = req.body;
+    const batchSize = Math.min(parseInt(count || '500', 10), 500);
+    const c = getAssetContract();
+    const lat = 43653200;
+    const lon = -79383200;
+    const results = [];
+    const errors = [];
+    const startTime = Date.now();
+    let lastLog = Date.now();
+
+    log(`\n🏭 BATCH START — ${batchSize} transactions`);
+    addToFeed('batch', `🏭 Batch mint starting: ${batchSize} TX`, '', '');
+
+    // Send all transactions concurrently in groups of 10
+    const concurrency = 10;
+    for (let i = 0; i < batchSize; i += concurrency) {
+      const batch = [];
+      const batchEnd = Math.min(i + concurrency, batchSize);
+      for (let j = i; j < batchEnd; j++) {
+        const tokenId = (BigInt('0x' + require('crypto').createHash('sha256').update(`BATCH-${Date.now()}-${j}`).digest('hex').slice(0, 8)) % 999999n) + BigInt(j);
+        const chipUid = `BATCH-${j}-${Date.now()}`;
+        batch.push(c.mintAsset(tokenId, chipUid, lat, lon, JSON.stringify({ name: `Industrial #${j}`, chipUid }))
+          .then(async tx => {
+            const st = Date.now();
+            const receipt = await tx.wait();
+            const confirmMs = Date.now() - st;
+            const asset = { tokenId: tokenId.toString(), chipUid, name: `Industrial #${j}`, lat, lon, txHash: tx.hash, blockNumber: receipt.blockNumber, confirmTimeMs: confirmMs, timestamp: new Date().toISOString(), collateralized: false, totalTaps: 1, owner: wallet.address, staked: false };
+            assets.unshift(asset);
+            results.push(asset);
+            addToFeed('mint', `Industrial #${asset.tokenId} [${confirmMs}ms]`, tx.hash, asset.tokenId);
+            if (Date.now() - lastLog > 3000) {
+              log(`   ${results.length + errors.length}/${batchSize} — ${Math.round((results.length+errors.length)/batchSize*100)}%`);
+              lastLog = Date.now();
+            }
+            return asset;
+          })
+          .catch(e => { errors.push({ index: j, error: e.message }); err(`BATCH ERROR #${j}: ${e.message}`); })
+        );
+      }
+      await Promise.allSettled(batch);
+    }
+
+    const totalTime = Date.now() - startTime;
+    const tps = totalTime > 0 ? Math.round((results.length / totalTime) * 1000) : 0;
+    const avgConfirm = results.length > 0 ? Math.round(results.reduce((s, a) => s + a.confirmTimeMs, 0) / results.length) : 0;
+
+    log(`\n🏭 BATCH DONE — ${results.length} succeeded, ${errors.length} failed`);
+    log(`   Total time: ${totalTime}ms  TPS: ${tps}  Avg confirm: ${avgConfirm}ms`);
+    addToFeed('batch', `🏭 Batch complete: ${results.length} TX — ${tps} TPS`, '', '');
+
+    res.json({
+      success: true,
+      totalRequested: batchSize,
+      succeeded: results.length,
+      failed: errors.length,
+      totalTimeMs: totalTime,
+      throughputTps: tps,
+      avgConfirmMs: avgConfirm,
+      firstTxHash: results[0]?.txHash || null,
+      lastTxHash: results[results.length - 1]?.txHash || null,
+    });
+  } catch (e) { err(`BATCH: ${e.message}`); res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/assets', (req, res) => res.json(assets));
 
 app.post('/api/tap/:id', async (req, res) => {
