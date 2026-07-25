@@ -1,67 +1,47 @@
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-export async function mintAsset(chipUid, lat, lon, name) {
-  const res = await fetch(`${API}/api/mint`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chipUid, lat, lon, name }),
+async function api(path, opts = {}) {
+  const res = await fetch(`${API}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
   });
-  if (!res.ok) throw new Error((await res.json()).error || 'Mint failed');
+  if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
   return res.json();
 }
 
-export async function getAssets() {
-  const res = await fetch(`${API}/api/assets`);
-  return res.json();
-}
+export const mintAsset = (chipUid, lat, lon, name) =>
+  api('/api/mint', { method: 'POST', body: JSON.stringify({ chipUid, lat, lon, name }) });
 
-export async function recordTap(tokenId, lat, lon) {
-  const res = await fetch(`${API}/api/tap/${tokenId}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ lat, lon }),
-  });
-  if (!res.ok) throw new Error((await res.json()).error || 'Tap failed');
-  return res.json();
-}
+export const getAssets = () => api('/api/assets');
+export const getStatus = () => api('/api/status');
+export const getTxFeed = () => api('/api/tx-feed');
+export const getEpoch = () => api('/api/epoch');
 
-export async function getGeoHistory(tokenId) {
-  const res = await fetch(`${API}/api/geo-history/${tokenId}`);
-  return res.json();
-}
+export const recordTap = (id, lat, lon) =>
+  api(`/api/tap/${id}`, { method: 'POST', body: JSON.stringify({ lat, lon }) });
 
-export async function getProvenance(tokenId) {
-  const res = await fetch(`${API}/api/provenance/${tokenId}`);
-  return res.json();
-}
+export const getGeoHistory = id => api(`/api/geo-history/${id}`);
+export const getProvenance = id => api(`/api/provenance/${id}`);
+export const getCertificate = id => api(`/api/certificate/${id}`);
 
-export async function getCertificate(tokenId) {
-  const res = await fetch(`${API}/api/certificate/${tokenId}`);
-  return res.json();
-}
+export const transferAsset = (tokenId, to) =>
+  api('/api/transfer', { method: 'POST', body: JSON.stringify({ tokenId, to }) });
 
-export async function transferAsset(tokenId, to) {
-  const res = await fetch(`${API}/api/transfer`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tokenId, to }),
-  });
-  if (!res.ok) throw new Error('Transfer failed');
-  return res.json();
-}
+export const simulateTrade = tokenId =>
+  api('/api/trade', { method: 'POST', body: JSON.stringify({ tokenId }) });
 
-export async function setCollateral(tokenId, status) {
-  const res = await fetch(`${API}/api/collateralize/${tokenId}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status }),
-  });
-  if (!res.ok) throw new Error('Collateral update failed');
-  return res.json();
-}
+export const setCollateral = (id, status) =>
+  api(`/api/collateralize/${id}`, { method: 'POST', body: JSON.stringify({ status }) });
 
-export async function getRoyalty(tokenId) {
-  const res = await fetch(`${API}/api/royalty/${tokenId}`);
-  return res.json();
-}
+export const getRoyalty = id => api(`/api/royalty/${id}`);
 
-export async function getStatus() {
-  const res = await fetch(`${API}/api/status`);
-  return res.json();
-}
+export const stakeToken = id =>
+  api(`/api/stake/${id}`, { method: 'POST' });
+
+export const unstakeToken = id =>
+  api(`/api/unstake/${id}`, { method: 'POST' });
+
+export const claimRewards = id =>
+  api(`/api/claim/${id}`, { method: 'POST' });
+
+export const getStakeInfo = id => api(`/api/stake-info/${id}`);
