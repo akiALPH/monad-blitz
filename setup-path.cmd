@@ -1,19 +1,17 @@
 @echo off
-echo ╔═══════════════════════════════════════╗
-echo ║  MONAD — Install System Command       ║
-echo ╚═══════════════════════════════════════╝
+echo ============================================
+echo   MONAD - Install System Command
+echo ============================================
 echo.
-set "MONAD_HOME=%~dp0"
-echo  Installing monad command from: %MONAD_HOME%
+echo  Installing monad command permanently...
 echo.
-setx MONAD_HOME "%MONAD_HOME%" >nul
-for %%I in ("%MONAD_HOME%") do set "MONAD_SHORT=%%~dI%%~pI"
-echo  Adding to system PATH...
-setx PATH "%PATH%;%MONAD_HOME%" >nul
+copy /Y "%~dp0monad.cmd" "%LOCALAPPDATA%\Microsoft\WindowsApps\monad.cmd" >nul
+echo  [1/2] Copied to: %%LOCALAPPDATA%%\Microsoft\WindowsApps\monad.cmd
+echo  [2/2] WindowsApps is already in PATH - ready to go.
 echo.
-echo  ✅ DONE. Close and reopen any terminals.
+echo  Done! Close and reopen any terminal.
 echo.
-echo  Now just type:  monad
+echo  Now type:  monad
 echo.
 echo  From any directory, any terminal.
 echo  Auto-healing watchdog included.
