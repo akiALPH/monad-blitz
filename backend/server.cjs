@@ -372,28 +372,36 @@ app.get('/api/certificate/:id', async (req, res) => {
 
 // ──────── BOOT ────────
 async function boot() {
+  // Start listening IMMEDIATELY — before any RPC calls
+  // This ensures the server is always reachable, even if RPC is down
+  app.listen(PORT, '0.0.0.0', () => {
+    log(`🚀 LIVE  http://localhost:${PORT}  http://0.0.0.0:${PORT}`);
+    log(`Health: http://localhost:${PORT}/health`);
+  });
+
   log('╔═══════════════════════════════════════╗');
   log('║  MONAD BLITZ — LUXVOID ENGINE         ║');
   log('╚═══════════════════════════════════════╝');
   log(`PID: ${process.pid}  CWD: ${ROOT}  Log: ${LOGFILE}`);
 
-  try {
-    getWallet();
-    const [bal, block] = await Promise.all([provider.getBalance(wallet.address), provider.getBlockNumber()]);
-    log(`Wallet: ${wallet.address}  Balance: ${ethers.formatEther(bal)} MON`);
-    log(`Chain: ${CHAIN_ID}  Block: ${block}`);
-    log(`Asset: ${CONTRACT_ADDR || '—'}  Staking: ${STAKING_ADDR || '—'}`);
-    if (STAKING_ADDR) try { const s = getStakingContract(); log(`Epoch: ${Number(await s.currentEpoch())}  Staked: ${Number(await s.totalStaked())}`); } catch {}
-    if (CONTRACT_ADDR) try { log(`Supply: ${Number(await getAssetContract().totalSupply())}`); } catch {}
-  } catch (e) {
-    err(`Boot warning: ${e.message} (server will still start, some features may be degraded)`);
-  }
-
-  app.listen(PORT, '0.0.0.0', () => {
-    log(`🚀 LIVE  http://localhost:${PORT}  http://0.0.0.0:${PORT}`);
-    log(`Health: http://localhost:${PORT}/health`);
-  });
+  // Delay RPC calls so they don't block startup
+  setTimeout(async () => {
+    try {
+      getWallet();
+      const [bal, block] = await Promise.all([provider.getBalance(wallet.address), provider.getBlockNumber()]);
+      log(`Wallet: ${wallet.address}  Balance: ${ethers.formatEther(bal)} MON`);
+      log(`Chain: ${CHAIN_ID}  Block: ${block}`);
+      log(`Asset: ${CONTRACT_ADDR || '—'}  Staking: ${STAKING_ADDR || '—'}`);
+      if (STAKING_ADDR) try { const s = getStakingContract(); log(`Epoch: ${Number(await s.currentEpoch())}  Staked: ${Number(await s.totalStaked())}`); } catch {}
+      if (CONTRACT_ADDR) try { log(`Supply: ${Number(await getAssetContract().totalSupply())}`); } catch {}
+    } catch (e) {
+      err(`Boot warning: ${e.message} (server will still start, some features may be degraded)`);
+    }
+  }, 100);
 }
+
+// ── Process keepalive (prevents event loop from draining) ──
+setInterval(() => {}, 60000); // ping every 60s keeps the loop alive
 
 // ── Graceful shutdown ──
 process.on('SIGINT', () => { log('SIGINT — shutting down'); process.exit(0); });
